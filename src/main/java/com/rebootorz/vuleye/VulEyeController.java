@@ -356,7 +356,7 @@ public class VulEyeController {
 
             Label userAgentLabel = new Label("User-Agent:");
             userAgentField = new TextField();
-            // 设置输入框宽度为400像素
+            // 设置输入框长度为400像素
             userAgentField.setPrefWidth(400.0);
 
             add(userAgentLabel, 0, 0);
@@ -397,6 +397,7 @@ public class VulEyeController {
             //更新配置文件
             HandleConfig.setValue(prop, "proxy.address", newProxyAddress);
             HandleConfig.setValue(prop, "proxy.port", newProxyPort);
+            resultTextArea.appendText("###代理配置成功：" + newProxyAddress + ":" + newProxyPort + "\n");
         }
     }
 
@@ -464,7 +465,7 @@ public class VulEyeController {
                         // 获取配置
                         Properties prop = new Properties();
                         Properties configProp = HandleConfig.configLoader(prop);
-                        String proxyAddress = configProp.getProperty("proxy.Address");
+                        String proxyAddress = configProp.getProperty("proxy.address");
                         int proxyPort = Integer.parseInt(configProp.getProperty("proxy.port"));
                         String userAgent = configProp.getProperty("ua.userAgent");
 
@@ -498,7 +499,6 @@ public class VulEyeController {
                             };
                             HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
                         }
-
 
                         if (proxyAddress != null && proxyPort >0) {
                             Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyAddress, proxyPort));
@@ -558,6 +558,7 @@ public class VulEyeController {
                                                 // 拼接请求相关的字符串，构造出请求包内容
                                                 String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                         + "Host: " + host + "\n"
+                                                        + "User-Agent: " + userAgent + "\n"
                                                         + "Content-Type: " + contentType + "\n";
                                                 System.out.println("\n【POC/EXP数据包】\n" + reqData);
                                                 resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
@@ -594,6 +595,7 @@ public class VulEyeController {
                                                     // 拼接请求相关的字符串，构造出请求包内容
                                                     String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                             + "Host: " + host + "\n"
+                                                            + "User-Agent: " + userAgent + "\n"
                                                             + "Content-Type: " + contentType + "\n";
                                                     System.out.println("\n【POC/EXP数据包】\n" + reqData);
                                                     resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
@@ -675,6 +677,7 @@ public class VulEyeController {
                                                 // 拼接请求相关的字符串，构造出请求包内容
                                                 String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                         + "Host: " + host + "\n"
+                                                        + "User-Agent: " + userAgent + "\n"
                                                         + "Content-Type: " + contentType + "\n\n" + data;
                                                 System.out.println("\n【POC/EXP数据包】\n" + reqData);
                                                 resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
@@ -709,6 +712,7 @@ public class VulEyeController {
                                                     // 拼接请求相关的字符串，构造出请求包内容
                                                     String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                             + "Host: " + host + "\n"
+                                                            + "User-Agent: " + userAgent + "\n"
                                                             + "Content-Type: " + contentType + "\n";
                                                     System.out.println("\n【POC/EXP数据包】\n" + reqData);
                                                     resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
