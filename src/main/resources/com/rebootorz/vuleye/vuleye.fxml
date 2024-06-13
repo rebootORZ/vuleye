@@ -23,7 +23,6 @@
     <children>
         <MenuBar prefHeight="28.0" prefWidth="195.0" VBox.vgrow="NEVER">
             <Menu mnemonicParsing="false" text="设置">
-
                 <MenuItem fx:id="menu_proxy" mnemonicParsing="false" onAction="#handleProxyMenuItem" text="代理"/>
                 <MenuItem fx:id="menu_useragent" mnemonicParsing="false" onAction="#handleUserAgentMenuItem" text="User-Agent"/>
             </Menu>

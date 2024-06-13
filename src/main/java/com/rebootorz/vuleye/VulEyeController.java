@@ -64,7 +64,7 @@ public class VulEyeController {
             // User-Agent配置信息
         String userAgent = config.getProperty("ua.userAgent");
         String defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:126.0) Gecko/20100101 Firefox/126.0";
-
+        Boolean useRandomUserAgent = Boolean.parseBoolean(config.getProperty("ua.useRandomUserAgent"));
         if (proxyAddress != null && proxyPort > 0) {
             System.out.println("###代理已设置: " + proxyAddress + ":" + proxyPort);
             resultTextArea.appendText("###代理已设置: " + proxyAddress + ":" + proxyPort + "\n");
@@ -73,16 +73,17 @@ public class VulEyeController {
             resultTextArea.appendText("###当前未配置代理。" + "\n");
         }
 
-        if (userAgent == null || userAgent.isEmpty()){
-            System.out.println("###User-Agent未设置，将使用默认配置：\n" + defaultUserAgent);
-            resultTextArea.appendText("###User-Agent未设置，将使用默认配置：\n" + defaultUserAgent);
+        if (useRandomUserAgent){
+            resultTextArea.appendText("###已启用随机User-Agent");
         } else {
-            System.out.println("###User-Agent已设置: \n" + userAgent);
-            resultTextArea.appendText("###User-Agent已设置: \n" + userAgent + "\n");
+            if (userAgent == null || userAgent.isEmpty()) {
+                System.out.println("###User-Agent未设置，将使用默认配置：\n" + defaultUserAgent);
+                resultTextArea.appendText("###User-Agent未设置，将使用默认配置：\n" + defaultUserAgent);
+            } else {
+                System.out.println("###User-Agent已设置: \n" + userAgent);
+                resultTextArea.appendText("###User-Agent已设置: \n" + userAgent + "\n");
+            }
         }
-
-
-
     }
 
     @FXML
@@ -348,6 +349,7 @@ public class VulEyeController {
     // User-Agent配置框
     public class UserAgentInputDialog extends GridPane {
         private TextField userAgentField;
+        private CheckBox randomUserAgentCheckBox;
 
         public UserAgentInputDialog(String defaultUserAgent) {
             setHgap(10);
@@ -364,7 +366,18 @@ public class VulEyeController {
 
             userAgentField.setText(defaultUserAgent);
 
+            // 添加启用随机User-Agent的复选框
+            Label randomUserAgentLabel = new Label("启用随机User-Agent: ");
+            Label note = new Label("勾选后将禁用上方自定义User-Agent");
+            //降低透明度以区别于主要标签
+            note.setStyle("-fx-opacity: 0.7;");
+            randomUserAgentCheckBox = new CheckBox();
+            add(randomUserAgentLabel, 0, 1);
+            add(randomUserAgentCheckBox, 1, 1);
+            add(note,1,2);
         }
+
+
 
         public String getUserAgent() {
             return userAgentField.getText();
@@ -379,7 +392,6 @@ public class VulEyeController {
         // 代理配置信息
         String proxyAddress = configProp.getProperty("proxy.address");
         int proxyPort = Integer.parseInt(configProp.getProperty("proxy.port"));
-
         // 使用配置信息初始化对话框
         ProxyInputDialog dialog = new ProxyInputDialog(proxyAddress, proxyPort);
         ButtonType saveButtonType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
@@ -409,9 +421,13 @@ public class VulEyeController {
         Properties configProp = HandleConfig.configLoader(prop);
         // 代理配置信息
         String userAgent = configProp.getProperty("ua.userAgent");
-
+        // 是否启用随机User-Agent
+        Boolean randomUserAgentStatus = Boolean.parseBoolean(configProp.getProperty("ua.useRandomUserAgent"));
         // 使用配置信息初始化对话框
         UserAgentInputDialog dialog = new UserAgentInputDialog(userAgent);
+        if (randomUserAgentStatus) {
+            dialog.randomUserAgentCheckBox.setSelected(true);
+        }
         ButtonType saveButtonType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
         ButtonType cancelButtonType = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
         Dialog<ButtonType> dialogBox = new Dialog<>();
@@ -420,11 +436,17 @@ public class VulEyeController {
         dialogBox.getDialogPane().setContent(dialog);
         dialogBox.getDialogPane().getButtonTypes().addAll(saveButtonType, cancelButtonType);
 
+
         Optional<ButtonType> result = dialogBox.showAndWait();
         if (result.isPresent() && result.get() == saveButtonType) {
             String newUserAgent = dialog.getUserAgent();
             //更新配置文件
             HandleConfig.setValue(prop, "ua.userAgent", newUserAgent);
+            if (dialog.randomUserAgentCheckBox.isSelected()) {
+                HandleConfig.setValue(prop, "ua.useRandomUserAgent", "true");
+            } else {
+                HandleConfig.setValue(prop, "ua.useRandomUserAgent", "false");
+            }
         }
     }
 
@@ -467,7 +489,22 @@ public class VulEyeController {
                         Properties configProp = HandleConfig.configLoader(prop);
                         String proxyAddress = configProp.getProperty("proxy.address");
                         int proxyPort = Integer.parseInt(configProp.getProperty("proxy.port"));
-                        String userAgent = configProp.getProperty("ua.userAgent");
+                        String userAgent = null;
+                        Boolean useRandomUserAgent = Boolean.parseBoolean(configProp.getProperty("ua.useRandomUserAgent"));
+                        if (useRandomUserAgent){
+                            String userAgentString = configProp.getProperty("ua.userAgentList");
+                            ObjectMapper mapper = new ObjectMapper();
+                            try {
+                                List<String> list = mapper.readValue(userAgentString, List.class);
+                                Random random = new Random();
+                                userAgent = list.get(random.nextInt(list.size()));
+                                System.out.println("###随机User-Agent: " + userAgent);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            userAgent = configProp.getProperty("ua.userAgent");
+                        }
 
                         HttpURLConnection connection = null;
 
@@ -516,6 +553,7 @@ public class VulEyeController {
                                 // 设置请求方法为GET
                                 connection.setRequestMethod("GET");
                                 // 设置请求头（data只有POST才会添加）
+
                                 connection.setRequestProperty("User-Agent", userAgent); // 设置User-Agent
                                 connection.setRequestProperty("Content-Type", contentType); // 设置Content-Type
                                 // 设置允许输入流，这里我们只是获取响应不需要发送数据，所以不开启输出流
