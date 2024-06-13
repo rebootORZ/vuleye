@@ -17,6 +17,8 @@ import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
@@ -24,6 +26,7 @@ import java.util.stream.Stream;
 
 public class VulEyeController {
     public MenuItem menu_proxy;
+    public MenuItem menu_useragent;
     @FXML
     private ScrollPane productsScrollPane;
 
@@ -52,17 +55,32 @@ public class VulEyeController {
         }
 
 
-        // 加载配置
-        ProxyConfig proxyConfig = ConfigLoader.loadProxyConfig();
-        if (proxyConfig.getAddress() != null && proxyConfig.getPort() > 0) {
-            // 应用代理配置到你的网络组件
-//            applyProxySettings(proxyConfig.getAddress(), proxyConfig.getPort());
-            System.out.println("###代理已设置: " + proxyConfig.getAddress() + ":" + proxyConfig.getPort());
-            resultTextArea.appendText("###代理已设置: " + proxyConfig.getAddress() + ":" + proxyConfig.getPort() + "\n");
+        // 初始化加载配置
+        Properties prop = new Properties();
+        Properties config = HandleConfig.configLoader(prop);
+            // 代理配置信息
+        String proxyAddress = config.getProperty("proxy.address");
+        int proxyPort = Integer.parseInt(config.getProperty("proxy.port"));
+            // User-Agent配置信息
+        String userAgent = config.getProperty("ua.userAgent");
+        String defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:126.0) Gecko/20100101 Firefox/126.0";
+
+        if (proxyAddress != null && proxyPort > 0) {
+            System.out.println("###代理已设置: " + proxyAddress + ":" + proxyPort);
+            resultTextArea.appendText("###代理已设置: " + proxyAddress + ":" + proxyPort + "\n");
         } else {
             System.out.println("###当前未配置代理。");
             resultTextArea.appendText("###当前未配置代理。" + "\n");
         }
+
+        if (userAgent == null || userAgent.isEmpty()){
+            System.out.println("###User-Agent未设置，将使用默认配置：\n" + defaultUserAgent);
+            resultTextArea.appendText("###User-Agent未设置，将使用默认配置：\n" + defaultUserAgent);
+        } else {
+            System.out.println("###User-Agent已设置: \n" + userAgent);
+            resultTextArea.appendText("###User-Agent已设置: \n" + userAgent + "\n");
+        }
+
 
 
     }
@@ -198,6 +216,10 @@ public class VulEyeController {
             showAlert("ERR - URL解析错误", "无法解析输入的URL，请检查格式！");
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        } catch (KeyManagementException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -211,7 +233,7 @@ public class VulEyeController {
     }
 
 
-    private void parseAndProcessJsonForHost(String protocol, String host, String selectedPoc) throws IOException {
+    private void parseAndProcessJsonForHost(String protocol, String host, String selectedPoc) throws IOException, NoSuchAlgorithmException, KeyManagementException {
         ObjectMapper objectMapper = new ObjectMapper();
         String directoryPath = "pocs/" + productsListView.getSelectionModel().getSelectedItem(); // 获取当前选中的产品目录
 
@@ -235,6 +257,10 @@ public class VulEyeController {
                             exploitPocs(poc, pocAbsolutePath, objectMapper, protocol, host);
                         } catch (IOException e) {
                             throw new RuntimeException(e);
+                        } catch (NoSuchAlgorithmException e) {
+                            throw new RuntimeException(e);
+                        } catch (KeyManagementException e) {
+                            throw new RuntimeException(e);
                         }
                     });
                 } catch (IOException e) {
@@ -248,7 +274,7 @@ public class VulEyeController {
             //不需要执行for
             Path pocAbsolutePath = Paths.get(directoryPath + "/" + selectedPoc + ".json");
             exploitPocs(selectedPoc, pocAbsolutePath, objectMapper, protocol, host);
-            }
+        }
 
 
     }
@@ -285,12 +311,12 @@ public class VulEyeController {
     }
 
 
-
+    // 代理配置框
     public class ProxyInputDialog extends GridPane {
         private TextField proxyAddressField;
         private TextField proxyPortField;
 
-        public ProxyInputDialog(String defaultAddress, String defaultPort) {
+        public ProxyInputDialog(String proxyAddress, int proxyPort) {
             setHgap(10);
             setVgap(10);
             setPadding(new Insets(20, 20, 20, 20));
@@ -305,8 +331,8 @@ public class VulEyeController {
             add(portLabel, 0, 1);
             add(proxyPortField, 1, 1);
 
-            proxyAddressField.setText(defaultAddress);
-            proxyPortField.setText(defaultPort);
+            proxyAddressField.setText(proxyAddress);
+            proxyPortField.setText(String.valueOf(proxyPort));
 
         }
 
@@ -319,15 +345,43 @@ public class VulEyeController {
         }
     }
 
+    // User-Agent配置框
+    public class UserAgentInputDialog extends GridPane {
+        private TextField userAgentField;
+
+        public UserAgentInputDialog(String defaultUserAgent) {
+            setHgap(10);
+            setVgap(10);
+            setPadding(new Insets(20, 20, 20, 20));
+
+            Label userAgentLabel = new Label("User-Agent:");
+            userAgentField = new TextField();
+            // 设置输入框宽度为400像素
+            userAgentField.setPrefWidth(400.0);
+
+            add(userAgentLabel, 0, 0);
+            add(userAgentField, 1, 0);
+
+            userAgentField.setText(defaultUserAgent);
+
+        }
+
+        public String getUserAgent() {
+            return userAgentField.getText();
+        }
+    }
+
     @FXML
     private void handleProxyMenuItem(ActionEvent event) {
         // 加载配置
-        ProxyConfig proxyConfig = ConfigLoader.loadProxyConfig();
-        String defaultAddress = proxyConfig.getAddress();
-        String defaultPort = String.valueOf(proxyConfig.getPort());
-        // 使用配置信息初始化对话框
-        ProxyInputDialog dialog = new ProxyInputDialog(defaultAddress, defaultPort);
+        Properties prop = new Properties();
+        Properties configProp = HandleConfig.configLoader(prop);
+        // 代理配置信息
+        String proxyAddress = configProp.getProperty("proxy.address");
+        int proxyPort = Integer.parseInt(configProp.getProperty("proxy.port"));
 
+        // 使用配置信息初始化对话框
+        ProxyInputDialog dialog = new ProxyInputDialog(proxyAddress, proxyPort);
         ButtonType saveButtonType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
         ButtonType cancelButtonType = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
         Dialog<ButtonType> dialogBox = new Dialog<>();
@@ -338,68 +392,43 @@ public class VulEyeController {
 
         Optional<ButtonType> result = dialogBox.showAndWait();
         if (result.isPresent() && result.get() == saveButtonType) {
-            String proxyAddress = dialog.getProxyAddress();
-            System.out.println("123");
-            String proxyPort = dialog.getProxyPort();
-            System.out.println("1234");
-            saveProxyConfig(proxyAddress, proxyPort);
-        }
-    }
-
-    private void saveProxyConfig(String proxyAddress, String proxyPort) {
-        try (PrintWriter writer = new PrintWriter(new FileWriter("config.ini"))) {
-            writer.println("[Proxy]");
-            writer.println("Address=" + proxyAddress);
-            writer.println("Port=" + proxyPort);
-            System.out.println("代理配置已保存到config.ini");
-            resultTextArea.appendText("###代理配置已保存。" + "\n");
-        } catch (IOException e) {
-            e.printStackTrace();
-            showAlert("保存错误", "保存代理配置到config.ini时发生错误。");
+            String newProxyAddress = dialog.getProxyAddress();
+            String newProxyPort = dialog.getProxyPort();
+            //更新配置文件
+            HandleConfig.setValue(prop, "proxy.address", newProxyAddress);
+            HandleConfig.setValue(prop, "proxy.port", newProxyPort);
         }
     }
 
 
+    @FXML
+    private void handleUserAgentMenuItem(ActionEvent event) {
+        // 加载配置
+        Properties prop = new Properties();
+        Properties configProp = HandleConfig.configLoader(prop);
+        // 代理配置信息
+        String userAgent = configProp.getProperty("ua.userAgent");
 
+        // 使用配置信息初始化对话框
+        UserAgentInputDialog dialog = new UserAgentInputDialog(userAgent);
+        ButtonType saveButtonType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButtonType = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
+        Dialog<ButtonType> dialogBox = new Dialog<>();
+        dialogBox.setTitle("设置User-Agent");
+        dialogBox.setHeaderText("请输入User-Agent信息");
+        dialogBox.getDialogPane().setContent(dialog);
+        dialogBox.getDialogPane().getButtonTypes().addAll(saveButtonType, cancelButtonType);
 
-    public static class ConfigLoader {
-        private static final String CONFIG_FILE_PATH = "config.ini";
-        public static ProxyConfig loadProxyConfig() {
-            Properties properties = new Properties();
-            ProxyConfig config = new ProxyConfig();
-            try (InputStream input = new FileInputStream(CONFIG_FILE_PATH)) {
-                properties.load(input);
-                String address = properties.getProperty("Address");
-                String portStr = properties.getProperty("Port");
-                if (address != null && !portStr.isEmpty()) {
-                    try {
-                        int port = Integer.parseInt(portStr);
-                        config.setAddress(address);
-                        config.setPort(port);
-                    } catch (NumberFormatException e) {
-                        System.err.println("ERR - 端口号转换错误，请检查config.ini文件中的Port设置。");
-                    }
-                }
-            } catch (IOException ex) {
-                System.err.println("ERR - 读取配置文件错误: " + ex.getMessage());
-            }
-            return config;
+        Optional<ButtonType> result = dialogBox.showAndWait();
+        if (result.isPresent() && result.get() == saveButtonType) {
+            String newUserAgent = dialog.getUserAgent();
+            //更新配置文件
+            HandleConfig.setValue(prop, "ua.userAgent", newUserAgent);
         }
     }
 
 
-    public static class ProxyConfig {
-        private String address;
-        private int port;
-        // Getter and Setter methods
-        public String getAddress() { return address; }
-        public void setAddress(String address) { this.address = address; }
-        public int getPort() { return port; }
-        public void setPort(int port) { this.port = port; }
-    }
-
-
-    private void exploitPocs(String poc, Path pocAbsolutePath, ObjectMapper objectMapper, String protocol, String host) throws IOException {
+    private void exploitPocs(String poc, Path pocAbsolutePath, ObjectMapper objectMapper, String protocol, String host) throws IOException, NoSuchAlgorithmException, KeyManagementException {
         System.out.println("尝试读取的文件路径: " + pocAbsolutePath.toString());
         // 检查是否为隐藏文件
         if (pocAbsolutePath.getFileName().toString().startsWith(".")) {
@@ -423,7 +452,6 @@ public class VulEyeController {
                         System.out.println("###当前是POC/EXP第：" + reqCount + "次发包。");
                         String method = reqNode.get("method").asText();
                         String uri = reqNode.get("uri").asText();
-                        String userAgent = reqNode.path("headers").get("user-agent").asText();
                         String contentType = reqNode.path("headers").get("content-type").asText();
                         String data = reqNode.get("data").asText();
 
@@ -433,53 +461,57 @@ public class VulEyeController {
                         JsonNode headerWordsNode = checkNode.get("header_words");
                         JsonNode bodyWordsNode = checkNode.get("body_words");
 
+                        // 获取配置
+                        Properties prop = new Properties();
+                        Properties configProp = HandleConfig.configLoader(prop);
+                        String proxyAddress = configProp.getProperty("proxy.Address");
+                        int proxyPort = Integer.parseInt(configProp.getProperty("proxy.port"));
+                        String userAgent = configProp.getProperty("ua.userAgent");
+
+                        HttpURLConnection connection = null;
+
+                        String fullUrl = protocol + "://" + host + uri; // 构建完整URL
+                        URL url = new URL(fullUrl);
+
+                        //不做ssl证书校验
+                        if ("https".equalsIgnoreCase(protocol)) {
+                            TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
+                                public X509Certificate[] getAcceptedIssuers() {
+                                    return null;
+                                }
+
+                                public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                                }
+
+                                public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                                }
+                            }};
+                            SSLContext sc = SSLContext.getInstance("SSL");
+                            sc.init(null, trustAllCerts, new SecureRandom());
+                            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+                            // 禁用主机名验证
+                            HostnameVerifier allHostsValid = new HostnameVerifier() {
+                                public boolean verify(String hostname, SSLSession session) {
+                                    return true;
+                                }
+                            };
+                            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+                        }
+
+
+                        if (proxyAddress != null && proxyPort >0) {
+                            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyAddress, proxyPort));
+                            // 打开连接并设置代理
+                            connection = (HttpURLConnection) url.openConnection(proxy);
+                        } else {
+                            connection = (HttpURLConnection) url.openConnection();
+                        }
+
+
                         // 根据method构造请求
                         if ("GET".equalsIgnoreCase(method)) {
-                            // 发送GET请求的逻辑
-                            Map<String, List<String>> reqHeader = new HashMap<>(); // 初始化请求头容器
                             try {
-                                String fullUrl = protocol + "://" + host + uri; // 构建完整URL
-                                URL url = new URL(fullUrl);
-
-                                // 从ProxyConfig获取代理配置
-                                ProxyConfig proxyConfig = ConfigLoader.loadProxyConfig();
-                                HttpURLConnection connection = null;
-
-                                //不做ssl证书校验
-                                if ("https".equalsIgnoreCase(protocol)) {
-                                    TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
-                                        public X509Certificate[] getAcceptedIssuers() {
-                                            return null;
-                                        }
-
-                                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                                        }
-
-                                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                                        }
-                                    }};
-                                    SSLContext sc = SSLContext.getInstance("SSL");
-                                    sc.init(null, trustAllCerts, new SecureRandom());
-                                    HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-
-                                    // 禁用主机名验证
-                                    HostnameVerifier allHostsValid = new HostnameVerifier() {
-                                        public boolean verify(String hostname, SSLSession session) {
-                                            return true;
-                                        }
-                                    };
-                                    HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-                                }
-                                String address = proxyConfig.getAddress();
-                                Integer port = proxyConfig.getPort();
-
-                                if (address != null && port != null) {
-                                    Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyConfig.getAddress(), proxyConfig.getPort()));
-                                    // 打开连接并设置代理
-                                    connection = (HttpURLConnection) url.openConnection(proxy);
-                                } else {
-                                    connection = (HttpURLConnection) url.openConnection();
-                                }
 
                                 // 设置请求方法为GET
                                 connection.setRequestMethod("GET");
@@ -500,11 +532,7 @@ public class VulEyeController {
                                 // 增加对404错误的处理
 
                                 if (responseCode == HttpURLConnection.HTTP_NOT_FOUND && reqCount == reqNum) { // HTTP_NOT_FOUND 对应404状态码
-
-                                    //resultTextArea.appendText("\nWARN - 请求的资源未找到（404错误），不存在漏洞文件-" + poc.replace(".json","") + "\n");
                                     System.out.println("\n---不存在漏洞：" + poc.replace(".json", "") + "!");
-                                    //resultTextArea.appendText("\n---不存在漏洞：" + poc.replace(".json","") + "!" + "\n");
-
                                 }
 
                                 if ((expectedStatus == HttpURLConnection.HTTP_INTERNAL_ERROR && responseCode == expectedStatus) || (responseCode == expectedStatus)) { // 并不是所有漏洞利用都是200才成功，所以得以poc中的status为准
@@ -524,7 +552,6 @@ public class VulEyeController {
                                                 && checkBody(bodyWordsNode, responseBody);
                                         if (isSuccess) {
                                             if (reqCount == reqNum) {
-                                                System.out.println("12345");
                                                 System.out.println("\n+++存在漏洞：" + poc.replace(".json", "") + " ！");
                                                 resultTextArea.appendText("\n+++存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
                                                 // 输出请求数据包
@@ -598,51 +625,7 @@ public class VulEyeController {
                                 e.printStackTrace();
                             }
                         } else if ("POST".equalsIgnoreCase(method)) {
-                            // 发送POST请求的逻辑
-                            Map<String, List<String>> reqHeader = new HashMap<>(); // 初始化请求头容器
                             try {
-                                String fullUrl = protocol + "://" + host + uri; // 构建完整URL
-                                URL url = new URL(fullUrl);
-
-                                // 从ProxyConfig获取代理配置
-                                ProxyConfig proxyConfig = ConfigLoader.loadProxyConfig();
-                                HttpURLConnection connection;
-
-                                //不做ssl证书校验
-                                if ("https".equalsIgnoreCase(protocol)) {
-                                    TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
-                                        public X509Certificate[] getAcceptedIssuers() {
-                                            return null;
-                                        }
-
-                                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                                        }
-
-                                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                                        }
-                                    }};
-                                    SSLContext sc = SSLContext.getInstance("SSL");
-                                    sc.init(null, trustAllCerts, new SecureRandom());
-                                    HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-
-                                    // 禁用主机名验证
-                                    HostnameVerifier allHostsValid = new HostnameVerifier() {
-                                        public boolean verify(String hostname, SSLSession session) {
-                                            return true;
-                                        }
-                                    };
-                                    HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-                                }
-
-                                String address = proxyConfig.getAddress();
-                                Integer port = proxyConfig.getPort();
-                                if (address != null && port != null) {
-                                    Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyConfig.getAddress(), proxyConfig.getPort()));
-                                    // 打开连接并设置代理
-                                    connection = (HttpURLConnection) url.openConnection(proxy);
-                                } else {
-                                    connection = (HttpURLConnection) url.openConnection();
-                                }
                                 // 设置请求方法为POST
                                 connection.setRequestMethod("POST");
 
@@ -720,7 +703,6 @@ public class VulEyeController {
                                                     && checkBody(bodyWordsNode, responseBody);
                                             if (isSuccess) {
                                                 if (reqCount == reqNum) {
-                                                    System.out.println("12345678");
                                                     System.out.println("\n+++存在漏洞：" + poc.replace(".json", "") + " ！");
                                                     resultTextArea.appendText("\n+++存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
                                                     // 输出请求数据包
@@ -773,7 +755,29 @@ public class VulEyeController {
 
 
 
+    public static class HandleConfig {
+        private static Properties configLoader(Properties prop){
+            // 读取配置文件
+            try (FileInputStream fis = new FileInputStream("config.properties")) {
+                prop.load(fis);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return prop;
+        }
 
+
+        private static void setValue(Properties prop, String key, String value){
+            try (FileOutputStream fos = new FileOutputStream("config.properties")) {
+                //修改
+                prop.setProperty(key, value);
+                //保存
+                prop.store(fos, "更新配置信息完成。");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
 
 
