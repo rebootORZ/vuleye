@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.text.Font?>
+
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuItem?>
+<VBox fx:id="root" fx:controller="com.rebootorz.vuleye.VulEyeController" prefHeight="600.0" prefWidth="900.0" xmlns:fx="http://javafx.com/fxml/1">
+  <children>
+    <MenuBar prefHeight="28.0" prefWidth="195.0" VBox.vgrow="NEVER">
+    <Menu mnemonicParsing="false" text="设置">
+
+        <MenuItem fx:id="menu_proxy" mnemonicParsing="false" onAction="#handleProxyMenuItem" text="代理"/>
+
+    </Menu>
+    </MenuBar>
+      <Pane prefHeight="-1.0" prefWidth="-1.0" />
+    <SplitPane dividerPositions="0.2633630289532294" focusTraversable="true" prefHeight="-1.0" prefWidth="-1.0" VBox.vgrow="ALWAYS">
+      <items>
+        <AnchorPane>
+               <children>
+                  <TextField layoutX="7.0" layoutY="14.0" fx:id="searchTextField"/>
+                  <Button layoutX="172.0" layoutY="14.0" mnemonicParsing="false" prefHeight="26.0" prefWidth="49.0" text="搜索" fx:id="search" onAction="#handleSearchButtonClick" />
+                  <ScrollPane layoutX="8.0" layoutY="51.0" prefHeight="493.0" prefWidth="214.0" fx:id="productsScrollPane">
+                      <content>
+                          <ListView prefHeight="491.0" prefWidth="212.0" fx:id="productsListView" onMouseClicked="#onListViewItemClick" />
+                      </content>
+                  </ScrollPane>
+               </children>
+        </AnchorPane>
+        <AnchorPane>
+          <children>
+            <Label alignment="CENTER" layoutX="165.0" layoutY="18.0" style="&#10;" text="URL" textAlignment="CENTER" wrapText="false">
+                     <textFill>
+                <Color red="0.624" green="0.624" blue="0.624" fx:id="x2" />
+                     </textFill>
+                     <font>
+                <Font size="15.0" fx:id="x1" />
+                     </font></Label>
+              <ScrollPane layoutY="51.0" prefHeight="493.0" prefWidth="658.0">
+                     <content>
+                        <TextArea prefHeight="491.0" prefWidth="654.0" fx:id="resultTextArea"/>
+                     </content>
+              </ScrollPane>
+                  <ChoiceBox layoutX="6.0" layoutY="14.0" prefHeight="26.0" prefWidth="150.0" fx:id="pocChoiceBox" />
+                  <TextField layoutX="199.0" layoutY="14.0" prefHeight="26.0" prefWidth="386.0" fx:id="urlTextField" />
+                  <Button layoutX="601.0" layoutY="14.0" mnemonicParsing="false" text="运行" fx:id="run" onAction="#handleRunButtonClick" />
+          </children>
+        </AnchorPane>
+      </items>
+    </SplitPane>
+    <HBox id="HBox" alignment="CENTER_LEFT" spacing="5.0" VBox.vgrow="NEVER">
+      <children>
+        <Pane prefHeight="-1.0" prefWidth="-1.0" HBox.hgrow="ALWAYS">
+               <children>
+              <Label layoutX="403.0" layoutY="1.0" maxHeight="1.7976931348623157E308" maxWidth="-1.0" text="Powered By RebootORZ  v1.0">
+                <font>
+                  <Font size="11.0" fx:id="x3" />
+                </font>
+                <textFill>
+                  <Color red="0.625" green="0.625" blue="0.625" fx:id="x4" />
+                </textFill>
+              </Label>
+               </children></Pane>
+      </children>
+      <padding>
+        <Insets bottom="3.0" left="3.0" right="3.0" top="3.0" />
+      </padding>
+    </HBox>
+  </children>
+</VBox>

