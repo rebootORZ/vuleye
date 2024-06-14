@@ -22,11 +22,13 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class VulEyeController {
     public MenuItem menu_proxy;
-    public MenuItem menu_useragent;
+    public MenuItem menu_headers;
     @FXML
     private ScrollPane productsScrollPane;
 
@@ -346,12 +348,13 @@ public class VulEyeController {
         }
     }
 
-    // User-Agent配置框
-    public class UserAgentInputDialog extends GridPane {
+    // Headers配置框
+    public class HeadersInputDialog extends GridPane {
         private TextField userAgentField;
         private CheckBox randomUserAgentCheckBox;
+        private TextArea otherHeaderTextArea;
 
-        public UserAgentInputDialog(String defaultUserAgent) {
+        public HeadersInputDialog(String defaultUserAgent, String otherHeaders) {
             setHgap(10);
             setVgap(10);
             setPadding(new Insets(20, 20, 20, 20));
@@ -375,9 +378,17 @@ public class VulEyeController {
             add(randomUserAgentLabel, 0, 1);
             add(randomUserAgentCheckBox, 1, 1);
             add(note,1,2);
+
+            // 其它header信息
+            Label otherHeaderLabel = new Label("其它header: ");
+            otherHeaderTextArea = new TextArea();
+            // 设置输入框长度为400像素,宽度100像素
+            otherHeaderTextArea.setPrefWidth(400.0);
+            otherHeaderTextArea.setPrefHeight(100.0);
+            add(otherHeaderLabel,0,3);
+            add(otherHeaderTextArea,1,3);
+            otherHeaderTextArea.setText(otherHeaders);
         }
-
-
 
         public String getUserAgent() {
             return userAgentField.getText();
@@ -425,24 +436,25 @@ public class VulEyeController {
 
 
     @FXML
-    private void handleUserAgentMenuItem(ActionEvent event) {
+    private void handleHeadersMenuItem(ActionEvent event) {
         // 加载配置
         Properties prop = new Properties();
         Properties configProp = HandleConfig.configLoader(prop);
-        // 代理配置信息
+        // useragent配置信息
         String userAgent = configProp.getProperty("ua.userAgent");
         // 是否启用随机User-Agent
         Boolean randomUserAgentStatus = Boolean.parseBoolean(configProp.getProperty("ua.useRandomUserAgent"));
+        // 其它header信息
+        String otherHeaders = configProp.getProperty("header.headers");
         // 使用配置信息初始化对话框
-        UserAgentInputDialog dialog = new UserAgentInputDialog(userAgent);
+        HeadersInputDialog dialog = new HeadersInputDialog(userAgent, otherHeaders);
         if (randomUserAgentStatus) {
             dialog.randomUserAgentCheckBox.setSelected(true);
         }
-        ButtonType saveButtonType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
+        ButtonType  saveButtonType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
         ButtonType cancelButtonType = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
         Dialog<ButtonType> dialogBox = new Dialog<>();
-        dialogBox.setTitle("设置User-Agent");
-        dialogBox.setHeaderText("请输入User-Agent信息");
+        dialogBox.setTitle("设置Header信息");
         dialogBox.getDialogPane().setContent(dialog);
         dialogBox.getDialogPane().getButtonTypes().addAll(saveButtonType, cancelButtonType);
 
@@ -456,6 +468,11 @@ public class VulEyeController {
                 HandleConfig.setValue(prop, "ua.useRandomUserAgent", "true");
             } else {
                 HandleConfig.setValue(prop, "ua.useRandomUserAgent", "false");
+            }
+            if (!dialog.otherHeaderTextArea.getText().isEmpty()){
+                HandleConfig.setValue(prop, "header.headers", dialog.otherHeaderTextArea.getText());
+            } else {
+                HandleConfig.setValue(prop, "header.headers", "");
             }
         }
     }
@@ -499,6 +516,9 @@ public class VulEyeController {
                         Properties configProp = HandleConfig.configLoader(prop);
                         String proxyAddress = configProp.getProperty("proxy.address");
                         int proxyPort = Integer.parseInt(configProp.getProperty("proxy.port"));
+
+                        String otherHeaders = configProp.getProperty("header.headers");
+
                         String userAgent = null;
                         Boolean useRandomUserAgent = Boolean.parseBoolean(configProp.getProperty("ua.useRandomUserAgent"));
                         if (useRandomUserAgent){
@@ -562,10 +582,20 @@ public class VulEyeController {
 
                                 // 设置请求方法为GET
                                 connection.setRequestMethod("GET");
-                                // 设置请求头（data只有POST才会添加）
 
                                 connection.setRequestProperty("User-Agent", userAgent); // 设置User-Agent
                                 connection.setRequestProperty("Content-Type", contentType); // 设置Content-Type
+                                // 设置其他头信息
+                                if (otherHeaders != null && !otherHeaders.isEmpty()){
+                                    Map<String, String> otherHeadersMap = parseHttpHeaders(otherHeaders);
+                                    resultTextArea.appendText("###配置的其它头信息如下：\n");
+                                    for (Map.Entry<String, String> entry : otherHeadersMap.entrySet()) {
+                                        System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+                                        connection.setRequestProperty(entry.getKey(), entry.getValue());
+                                        resultTextArea.appendText( "| " + entry.getKey() + ": " + entry.getValue());
+                                    }
+                                }
+                                //connection.setRequestProperty();
                                 // 设置允许输入流，这里我们只是获取响应不需要发送数据，所以不开启输出流
                                 connection.setDoOutput(false);
 
@@ -607,7 +637,8 @@ public class VulEyeController {
                                                 String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                         + "Host: " + host + "\n"
                                                         + "User-Agent: " + userAgent + "\n"
-                                                        + "Content-Type: " + contentType + "\n";
+                                                        + "Content-Type: " + contentType + "\n"
+                                                        + otherHeaders + "\n";
                                                 System.out.println("\n【POC/EXP数据包】\n" + reqData);
                                                 resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
                                             }
@@ -636,7 +667,6 @@ public class VulEyeController {
                                                     && checkBody(bodyWordsNode, responseBody);
                                             if (isSuccess) {
                                                 if (reqCount == reqNum) {
-                                                    System.out.println("123456");
                                                     System.out.println("\n+++存在漏洞：" + poc.replace(".json", "") + " ！");
                                                     resultTextArea.appendText("\n+++存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
                                                     // 输出请求数据包
@@ -644,7 +674,8 @@ public class VulEyeController {
                                                     String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                             + "Host: " + host + "\n"
                                                             + "User-Agent: " + userAgent + "\n"
-                                                            + "Content-Type: " + contentType + "\n";
+                                                            + "Content-Type: " + contentType + "\n"
+                                                            + otherHeaders + "\n";
                                                     System.out.println("\n【POC/EXP数据包】\n" + reqData);
                                                     resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
                                                 }
@@ -684,6 +715,17 @@ public class VulEyeController {
                                 connection.setRequestProperty("User-Agent", userAgent);
                                 connection.setRequestProperty("Content-Type", contentType);
 
+                                // 设置其他头信息
+                                if (otherHeaders != null && !otherHeaders.isEmpty()){
+                                    Map<String, String> otherHeadersMap = parseHttpHeaders(otherHeaders);
+                                    resultTextArea.appendText("###配置的其它头信息如下：\n");
+                                    for (Map.Entry<String, String> entry : otherHeadersMap.entrySet()) {
+                                        System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+                                        connection.setRequestProperty(entry.getKey(), entry.getValue());
+                                        resultTextArea.appendText( "| " + entry.getKey() + ": " + entry.getValue());
+                                    }
+                                }
+
                                 // 写入POST数据
                                 OutputStream os = connection.getOutputStream();
                                 os.write(data.getBytes());
@@ -718,7 +760,6 @@ public class VulEyeController {
                                                 && checkBody(bodyWordsNode, responseBody);
                                         if (isSuccess) {
                                             if (reqCount == reqNum) {
-                                                System.out.println("1234567");
                                                 System.out.println("\n+++存在漏洞：" + poc.replace(".json", "") + " ！");
                                                 resultTextArea.appendText("\n+++存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
                                                 // 输出请求数据包
@@ -726,7 +767,9 @@ public class VulEyeController {
                                                 String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                         + "Host: " + host + "\n"
                                                         + "User-Agent: " + userAgent + "\n"
-                                                        + "Content-Type: " + contentType + "\n\n" + data;
+                                                        + "Content-Type: " + contentType + "\n"
+                                                        + otherHeaders + "\n\n"
+                                                        + data;
                                                 System.out.println("\n【POC/EXP数据包】\n" + reqData);
                                                 resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
                                             }
@@ -761,7 +804,9 @@ public class VulEyeController {
                                                     String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                             + "Host: " + host + "\n"
                                                             + "User-Agent: " + userAgent + "\n"
-                                                            + "Content-Type: " + contentType + "\n";
+                                                            + "Content-Type: " + contentType + "\n"
+                                                            + otherHeaders + "\n\n"
+                                                                    + data;
                                                     System.out.println("\n【POC/EXP数据包】\n" + reqData);
                                                     resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
                                                 }
@@ -831,6 +876,20 @@ public class VulEyeController {
         }
     }
 
+    public static Map<String, String> parseHttpHeaders(String input) {
+        Map<String, String> headers = new HashMap<>();
+        String[] lines = input.split("\n");
+        Pattern headerPattern = Pattern.compile("^(\\w+): (.+)$");
+        for (String line : lines) {
+            Matcher matcher = headerPattern.matcher(line.trim());
+            if (matcher.find()) {
+                String headerName = matcher.group(1);
+                String headerValue = matcher.group(2);
+                headers.put(headerName, headerValue);
+            }
+        }
+        return headers;
+    }
 
 
 }
