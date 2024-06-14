@@ -5,7 +5,6 @@
       "method": "GET",
       "uri": "/WebReport/ReportServer?op=fs_remote_design&cmd=design_list_file&file_path=../..&currentUserName=admin&currentUserId=1&isWebReport=true",
       "headers":{
-        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
         "content-type": "application/x-www-form-urlencoded"
       },
       "data": "",

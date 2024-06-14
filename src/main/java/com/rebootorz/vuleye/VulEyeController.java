@@ -60,12 +60,12 @@ public class VulEyeController {
         Properties config = HandleConfig.configLoader(prop);
             // 代理配置信息
         String proxyAddress = config.getProperty("proxy.address");
-        int proxyPort = Integer.parseInt(config.getProperty("proxy.port"));
+        String proxyPort = config.getProperty("proxy.port");
             // User-Agent配置信息
         String userAgent = config.getProperty("ua.userAgent");
         String defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:126.0) Gecko/20100101 Firefox/126.0";
         Boolean useRandomUserAgent = Boolean.parseBoolean(config.getProperty("ua.useRandomUserAgent"));
-        if (proxyAddress != null && proxyPort > 0) {
+        if ((proxyAddress != null && !proxyAddress.isEmpty()) && (proxyPort != null && !proxyPort.isEmpty())) {
             System.out.println("###代理已设置: " + proxyAddress + ":" + proxyPort);
             resultTextArea.appendText("###代理已设置: " + proxyAddress + ":" + proxyPort + "\n");
         } else {
@@ -74,7 +74,7 @@ public class VulEyeController {
         }
 
         if (useRandomUserAgent){
-            resultTextArea.appendText("###已启用随机User-Agent");
+            resultTextArea.appendText("###已启用随机User-Agent\n");
         } else {
             if (userAgent == null || userAgent.isEmpty()) {
                 System.out.println("###User-Agent未设置，将使用默认配置：\n" + defaultUserAgent);
@@ -317,7 +317,7 @@ public class VulEyeController {
         private TextField proxyAddressField;
         private TextField proxyPortField;
 
-        public ProxyInputDialog(String proxyAddress, int proxyPort) {
+        public ProxyInputDialog(String proxyAddress, String proxyPort) {
             setHgap(10);
             setVgap(10);
             setPadding(new Insets(20, 20, 20, 20));
@@ -333,7 +333,7 @@ public class VulEyeController {
             add(proxyPortField, 1, 1);
 
             proxyAddressField.setText(proxyAddress);
-            proxyPortField.setText(String.valueOf(proxyPort));
+            proxyPortField.setText(proxyPort);
 
         }
 
@@ -342,7 +342,7 @@ public class VulEyeController {
         }
 
         public String getProxyPort() {
-            return proxyPortField.getText().toString();
+            return proxyPortField.getText();
         }
     }
 
@@ -391,9 +391,14 @@ public class VulEyeController {
         Properties configProp = HandleConfig.configLoader(prop);
         // 代理配置信息
         String proxyAddress = configProp.getProperty("proxy.address");
-        int proxyPort = Integer.parseInt(configProp.getProperty("proxy.port"));
-        // 使用配置信息初始化对话框
-        ProxyInputDialog dialog = new ProxyInputDialog(proxyAddress, proxyPort);
+        String proxyPort = configProp.getProperty("proxy.port");
+        ProxyInputDialog dialog = null;
+        if ((proxyAddress != null && !proxyAddress.isEmpty()) && (proxyPort != null && !proxyPort.isEmpty())) {
+            // 使用配置信息初始化对话框
+            dialog = new ProxyInputDialog(proxyAddress, proxyPort);
+        } else {
+            dialog = new ProxyInputDialog(null, null);
+        }
         ButtonType saveButtonType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
         ButtonType cancelButtonType = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
         Dialog<ButtonType> dialogBox = new Dialog<>();
@@ -409,7 +414,12 @@ public class VulEyeController {
             //更新配置文件
             HandleConfig.setValue(prop, "proxy.address", newProxyAddress);
             HandleConfig.setValue(prop, "proxy.port", newProxyPort);
-            resultTextArea.appendText("###代理配置成功：" + newProxyAddress + ":" + newProxyPort + "\n");
+            if ((newProxyAddress == null || newProxyAddress.isEmpty()) || (newProxyPort == null || newProxyPort.isEmpty()) ){
+                resultTextArea.appendText("###代理配置已清空。\n");
+            } else{
+                resultTextArea.appendText("###代理配置成功：" + newProxyAddress + ":" + newProxyPort + "\n");
+            }
+
         }
     }
 

