@@ -1,0 +1,18 @@
+{
+  "poc": "泛微-E-Cology getSqlData SQL注入漏洞",
+  "req":[
+    {
+      "method": "GET",
+      "uri": "/",
+      "headers":{
+        "content-type": "$$DNSLOG$$"
+      },
+      "data": "",
+      "check":{
+        "status": 200,
+        "header_words": [],
+        "body_words": []
+      }
+    }
+  ]
+}

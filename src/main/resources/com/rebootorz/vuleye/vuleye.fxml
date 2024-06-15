@@ -25,6 +25,7 @@
             <Menu mnemonicParsing="false" text="设置">
                 <MenuItem fx:id="menu_proxy" mnemonicParsing="false" onAction="#handleProxyMenuItem" text="代理"/>
                 <MenuItem fx:id="menu_headers" mnemonicParsing="false" onAction="#handleHeadersMenuItem" text="Headers"/>
+                <MenuItem fx:id="menu_dnslog" mnemonicParsing="false" onAction="#handleDnslogMenuItem" text="DNSLog"/>
             </Menu>
         </MenuBar>
         <Pane prefHeight="-1.0" prefWidth="-1.0" />
