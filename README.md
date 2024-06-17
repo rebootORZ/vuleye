@@ -21,6 +21,16 @@
 ![img.png](assets/2.png)
 ![img.png](assets/3.png)
 
+## 其它Header
+1.格式<br>
+一行一个，“:”后面一定要有空格
+```text
+Cookie: JESSIONID=123;ID=123456
+Token: 123456789
+```
+![img.png](assets/6.png)
+![img.png](assets/7.png)
+
 ## POC编写
 1.待计划中的功能基本开发差不多了再写POC编写的注意事项。<br>
 

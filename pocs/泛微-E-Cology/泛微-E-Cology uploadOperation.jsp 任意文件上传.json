@@ -7,7 +7,7 @@
       "headers":{
         "content-type": "multipart/form-data; boundary=----WebKitFormBoundary6XgyjB6SeCArD3Hc"
       },
-      "data": "------WebKitFormBoundary6XgyjB6SeCArD3Hc\n        Content-Disposition: form-data; name=\"file\"; filename=\"vuleyetest.jsp\"\n        Content-Type: application/octet-stream\n        \n        <%out.print(\"vuleyetest\");%>\n        ------WebKitFormBoundary6XgyjB6SeCArD3Hc--",
+      "data": "------WebKitFormBoundary6XgyjB6SeCArD3Hc\nContent-Disposition: form-data; name=\"file\"; filename=\"vuleyetest.jsp\"\nContent-Type: application/octet-stream\n\n<%out.print(\"vuleyetest\");%>\n------WebKitFormBoundary6XgyjB6SeCArD3Hc--",
       "check":{
         "status": 200,
         "header_words": [],

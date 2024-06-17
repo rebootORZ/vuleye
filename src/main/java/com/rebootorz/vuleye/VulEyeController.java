@@ -411,6 +411,9 @@ public class VulEyeController {
             // 设置输入框长度为400像素,宽度100像素
             otherHeaderTextArea.setPrefWidth(400.0);
             otherHeaderTextArea.setPrefHeight(100.0);
+            // 设置提示文本为浅色显示
+            otherHeaderTextArea.setPromptText("一行一个，':'后面要有空格。");
+
             add(otherHeaderLabel,0,3);
             add(otherHeaderTextArea,1,3);
             otherHeaderTextArea.setText(otherHeaders);
@@ -759,7 +762,7 @@ public class VulEyeController {
                                         for (Map.Entry<String, String> entry : otherHeadersMap.entrySet()) {
                                             System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
                                             connection.setRequestProperty(entry.getKey(), entry.getValue());
-                                            //resultTextArea.appendText( "| " + entry.getKey() + ": " + entry.getValue() + "\n");
+                                            //Platform.runLater(() -> resultTextArea.appendText( "| " + entry.getKey() + ": " + entry.getValue() + "\n"));
                                         }
                                     }
 
@@ -778,6 +781,7 @@ public class VulEyeController {
                                     if (responseCode == HttpURLConnection.HTTP_NOT_FOUND && reqCount == reqNum) { // HTTP_NOT_FOUND 对应404状态码
                                         System.out.println("\n--- 状态码404：" + poc.replace(".json", "") + "!");
                                     }
+
 
                                     if (needDnslog){
                                         if (checkCeyeApi(subString)){
