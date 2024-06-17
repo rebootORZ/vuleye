@@ -1,7 +1,9 @@
 package com.rebootorz.vuleye;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -579,195 +581,354 @@ public class VulEyeController {
 
 
     private void exploitPocs(String poc, Path pocAbsolutePath, ObjectMapper objectMapper, String protocol, String host) throws IOException, NoSuchAlgorithmException, KeyManagementException {
-        System.out.println("尝试读取的文件路径: " + pocAbsolutePath.toString());
-        // 存放dnslog的前缀
-        String subString = null;
-        // 检查是否为隐藏文件
-        if (pocAbsolutePath.getFileName().toString().startsWith(".")) {
-            System.out.println("跳过隐藏文件: " + pocAbsolutePath);
-            return;
-        }
-        // 使用Path对象创建File对象
-        File jsonFile = pocAbsolutePath.toFile();
-        if (jsonFile.exists() && jsonFile.isFile()) {
-            // 读取并解析JSON文件
-            JsonNode jsonNode = objectMapper.readTree(jsonFile);
-            System.out.println(jsonNode.toString());
-            System.out.println("### 成功解析并处理了JSON文件: " + jsonFile);
-            JsonNode requestsNode = jsonNode.get("req"); // 获取"req"数组
-            // 判断漏洞是否需要dnslog
-            String reqString = requestsNode.toString();
-            Pattern pattern = Pattern.compile("\\$\\$DNSLOG\\$\\$");
-            Matcher matcher = pattern.matcher(reqString);
-            Boolean needDnslog = matcher.find();
-            if (needDnslog) {
-                Properties prop = new Properties();
-                Properties configProp = HandleConfig.configLoader(prop);
-                String dnslog = configProp.getProperty("dnslog.ceye");
-                if (dnslog == null || dnslog.isEmpty()) {
-                    System.out.println("### 漏洞 " + poc + " 需要借助DNSLog，请配置！");
-                    resultTextArea.appendText("\n### 漏洞 " + poc + " 需要借助DNSLog，请配置！\n");
-                    return;
-                } else{
-                    //subString = generateRandomString(5); //生成长度为5的小写字母字符串
-                    subString="aaddcc1";
-                    String subDnslogDomain = subString + '.' + dnslog;
-                    resultTextArea.appendText("\n### 本次漏洞DNSLog为：" + subDnslogDomain + "\n");
-                    String requestsNodeString = requestsNode.toString();
-                    String replacedJsonString = requestsNodeString.replace("$$DNSLOG$$", subString+ "." + dnslog);
-                    requestsNode = objectMapper.readTree(replacedJsonString);
-                }
-            }else{
-                System.out.println("### 该漏洞 " + poc + "无需使用DNSLog!");
+        Thread taskThread = new Thread(() -> {
+            System.out.println("尝试读取的文件路径: " + pocAbsolutePath.toString());
+            // 存放dnslog的前缀
+            String subString = null;
+            // 检查是否为隐藏文件
+            if (pocAbsolutePath.getFileName().toString().startsWith(".")) {
+                System.out.println("跳过隐藏文件: " + pocAbsolutePath);
+                return;
             }
-
-
-            int reqNum = requestsNode.size();
-            int reqCount = 1;
-            System.out.println("\n本次探测，一共需要：" + reqNum + "次请求。\n");
-            if (requestsNode.isArray()) { // 检查是否为数组
-                for (JsonNode reqNode : requestsNode) { // 遍历数组中的每个请求
-                    if (reqCount <= reqNum) {
-                        System.out.println("### 当前是POC/EXP第：" + reqCount + "次发包。");
-                        String method = reqNode.get("method").asText();
-                        String uri = reqNode.get("uri").asText();
-                        String contentType = reqNode.path("headers").get("content-type").asText();
-                        String data = reqNode.get("data").asText();
-
-                        // 获取检查条件
-                        JsonNode checkNode = reqNode.get("check");
-                        int expectedStatus = Integer.parseInt(checkNode.get("status").asText());
-                        JsonNode headerWordsNode = checkNode.get("header_words");
-                        JsonNode bodyWordsNode = checkNode.get("body_words");
-
-                        // 获取配置
-                        Properties prop = new Properties();
-                        Properties configProp = HandleConfig.configLoader(prop);
-                        String proxyAddress = configProp.getProperty("proxy.address");
-                        String proxyPortStr = configProp.getProperty("proxy.port");
-                        int proxyPort=0;
-                        if (proxyPortStr != null && !proxyPortStr.isEmpty()){
-                            proxyPort = Integer.parseInt(proxyPortStr);
+            // 使用Path对象创建File对象
+            File jsonFile = pocAbsolutePath.toFile();
+            if (jsonFile.exists() && jsonFile.isFile()) {
+                // 读取并解析JSON文件
+                JsonNode jsonNode = null;
+                try {
+                    jsonNode = objectMapper.readTree(jsonFile);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                System.out.println(jsonNode.toString());
+                System.out.println("### 成功解析并处理了JSON文件: " + jsonFile);
+                JsonNode requestsNode = jsonNode.get("req"); // 获取"req"数组
+                // 判断漏洞是否需要dnslog
+                String reqString = requestsNode.toString();
+                Pattern pattern = Pattern.compile("\\$\\$DNSLOG\\$\\$");
+                Matcher matcher = pattern.matcher(reqString);
+                Boolean needDnslog = matcher.find();
+                if (needDnslog) {
+                    Properties prop = new Properties();
+                    Properties configProp = HandleConfig.configLoader(prop);
+                    String dnslog = configProp.getProperty("dnslog.ceye");
+                    if (dnslog == null || dnslog.isEmpty()) {
+                        System.out.println("### 漏洞 " + poc + " 需要借助DNSLog，请配置！");
+                        Platform.runLater(() -> resultTextArea.appendText("\n### 漏洞 " + poc + " 需要借助DNSLog，请配置！\n"));
+                        return;
+                    } else{
+                        //subString = generateRandomString(5); //生成长度为5的小写字母字符串
+                        subString="aaddcc1";
+                        String subDnslogDomain = subString + '.' + dnslog;
+                        Platform.runLater(() -> resultTextArea.appendText("\n### 本次漏洞DNSLog为：" + subDnslogDomain + "\n"));
+                        String requestsNodeString = requestsNode.toString();
+                        String replacedJsonString = requestsNodeString.replace("$$DNSLOG$$", subString+ "." + dnslog);
+                        try {
+                            requestsNode = objectMapper.readTree(replacedJsonString);
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
                         }
+                    }
+                }else{
+                    System.out.println("### 该漏洞 " + poc + "无需使用DNSLog!");
+                }
 
-                        String otherHeaders = configProp.getProperty("header.headers");
 
-                        String userAgent = null;
-                        Boolean useRandomUserAgent = Boolean.parseBoolean(configProp.getProperty("ua.useRandomUserAgent"));
-                        if (useRandomUserAgent){
-                            String userAgentString = configProp.getProperty("ua.userAgentList");
-                            ObjectMapper mapper = new ObjectMapper();
-                            try {
-                                List<String> list = mapper.readValue(userAgentString, List.class);
-                                Random random = new Random();
-                                userAgent = list.get(random.nextInt(list.size()));
-                                System.out.println("### 随机User-Agent: " + userAgent);
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                int reqNum = requestsNode.size();
+                int reqCount = 1;
+                System.out.println("\n本次探测，一共需要：" + reqNum + "次请求。\n");
+                if (requestsNode.isArray()) { // 检查是否为数组
+                    for (JsonNode reqNode : requestsNode) { // 遍历数组中的每个请求
+                        if (reqCount <= reqNum) {
+                            System.out.println("### 当前是POC/EXP第：" + reqCount + "次发包。");
+                            String method = reqNode.get("method").asText();
+                            String uri = reqNode.get("uri").asText();
+                            String contentType = reqNode.path("headers").get("content-type").asText();
+                            String data = reqNode.get("data").asText();
+
+                            // 获取检查条件
+                            JsonNode checkNode = reqNode.get("check");
+                            int expectedStatus = Integer.parseInt(checkNode.get("status").asText());
+                            JsonNode headerWordsNode = checkNode.get("header_words");
+                            JsonNode bodyWordsNode = checkNode.get("body_words");
+
+                            // 获取配置
+                            Properties prop = new Properties();
+                            Properties configProp = HandleConfig.configLoader(prop);
+                            String proxyAddress = configProp.getProperty("proxy.address");
+                            String proxyPortStr = configProp.getProperty("proxy.port");
+                            int proxyPort=0;
+                            if (proxyPortStr != null && !proxyPortStr.isEmpty()){
+                                proxyPort = Integer.parseInt(proxyPortStr);
                             }
-                        } else {
-                            userAgent = configProp.getProperty("ua.userAgent");
-                        }
 
-                        HttpURLConnection connection = null;
+                            String otherHeaders = configProp.getProperty("header.headers");
 
-                        String fullUrl = protocol + "://" + host + uri; // 构建完整URL
-                        URL url = new URL(fullUrl);
-
-                        //不做ssl证书校验
-                        if ("https".equalsIgnoreCase(protocol)) {
-                            TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
-                                public X509Certificate[] getAcceptedIssuers() {
-                                    return null;
-                                }
-
-                                public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                                }
-
-                                public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                                }
-                            }};
-                            SSLContext sc = SSLContext.getInstance("SSL");
-                            sc.init(null, trustAllCerts, new SecureRandom());
-                            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-
-                            // 禁用主机名验证
-                            HostnameVerifier allHostsValid = new HostnameVerifier() {
-                                public boolean verify(String hostname, SSLSession session) {
-                                    return true;
-                                }
-                            };
-                            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
-                        }
-
-                        if (proxyAddress != null && proxyPort >0) {
-                            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyAddress, proxyPort));
-                            // 打开连接并设置代理
-                            connection = (HttpURLConnection) url.openConnection(proxy);
-                        } else {
-                            connection = (HttpURLConnection) url.openConnection();
-                        }
-
-
-                        // 根据method构造请求
-                        if ("GET".equalsIgnoreCase(method)) {
-                            try {
-
-                                // 设置请求方法为GET
-                                connection.setRequestMethod("GET");
-
-                                connection.setRequestProperty("User-Agent", userAgent); // 设置User-Agent
-                                connection.setRequestProperty("Content-Type", contentType); // 设置Content-Type
-                                // 设置其他头信息
-                                if (otherHeaders != null && !otherHeaders.isEmpty()){
-                                    Map<String, String> otherHeadersMap = parseHttpHeaders(otherHeaders);
-                                    //resultTextArea.appendText("\n### 配置的其它头信息如下：\n");
-                                    for (Map.Entry<String, String> entry : otherHeadersMap.entrySet()) {
-                                        System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
-                                        connection.setRequestProperty(entry.getKey(), entry.getValue());
-                                        //resultTextArea.appendText( "| " + entry.getKey() + ": " + entry.getValue() + "\n");
-                                    }
-                                }
-
-                                connection.setDoOutput(false);
-
-                                int responseCode = 0;
+                            String userAgent = null;
+                            Boolean useRandomUserAgent = Boolean.parseBoolean(configProp.getProperty("ua.useRandomUserAgent"));
+                            if (useRandomUserAgent){
+                                String userAgentString = configProp.getProperty("ua.userAgentList");
+                                ObjectMapper mapper = new ObjectMapper();
                                 try {
-                                    // 获取响应码
-                                    responseCode = connection.getResponseCode();
-                                } catch (java.net.ConnectException e) {
-                                    resultTextArea.appendText("ERR - 网络异常，请检查代理/网站！\n");
+                                    List<String> list = mapper.readValue(userAgentString, List.class);
+                                    Random random = new Random();
+                                    userAgent = list.get(random.nextInt(list.size()));
+                                    System.out.println("### 随机User-Agent: " + userAgent);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
                                 }
+                            } else {
+                                userAgent = configProp.getProperty("ua.userAgent");
+                            }
 
-                                // 增加对404错误的处理
+                            HttpURLConnection connection = null;
 
-                                if (responseCode == HttpURLConnection.HTTP_NOT_FOUND && reqCount == reqNum) { // HTTP_NOT_FOUND 对应404状态码
-                                    System.out.println("\n--- 状态码404：" + poc.replace(".json", "") + "!");
+                            String fullUrl = protocol + "://" + host + uri; // 构建完整URL
+                            URL url = null;
+                            try {
+                                url = new URL(fullUrl);
+                            } catch (MalformedURLException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            //不做ssl证书校验
+                            if ("https".equalsIgnoreCase(protocol)) {
+                                TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
+                                    public X509Certificate[] getAcceptedIssuers() {
+                                        return null;
+                                    }
+
+                                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                                    }
+
+                                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                                    }
+                                }};
+                                SSLContext sc = null;
+                                try {
+                                    sc = SSLContext.getInstance("SSL");
+                                } catch (NoSuchAlgorithmException e) {
+                                    throw new RuntimeException(e);
                                 }
+                                try {
+                                    sc.init(null, trustAllCerts, new SecureRandom());
+                                } catch (KeyManagementException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
 
-                                if (needDnslog){
-                                    if (checkCeyeApi(subString)){
-                                        if (reqCount == reqNum) {
-                                            System.out.println("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！");
-                                            resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
-                                            // 输出请求数据包
-                                            // 拼接请求相关的字符串，构造出请求包内容
-                                            String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
-                                                    + "Host: " + host + "\n"
-                                                    + "User-Agent: " + userAgent + "\n"
-                                                    + "Content-Type: " + contentType + "\n"
-                                                    + otherHeaders + "\n";
-                                            System.out.println("\n【POC/EXP数据包】\n" + reqData);
-                                            resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
-                                        }
-                                    } else {
-                                        if (reqCount == reqNum){
-                                            System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
-                                            resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n");
+                                // 禁用主机名验证
+                                HostnameVerifier allHostsValid = new HostnameVerifier() {
+                                    public boolean verify(String hostname, SSLSession session) {
+                                        return true;
+                                    }
+                                };
+                                HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+                            }
+
+                            if (proxyAddress != null && proxyPort >0) {
+                                Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyAddress, proxyPort));
+                                // 打开连接并设置代理
+                                try {
+                                    connection = (HttpURLConnection) url.openConnection(proxy);
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            } else {
+                                try {
+                                    connection = (HttpURLConnection) url.openConnection();
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+
+
+                            // 根据method构造请求
+                            if ("GET".equalsIgnoreCase(method)) {
+                                try {
+
+                                    // 设置请求方法为GET
+                                    connection.setRequestMethod("GET");
+
+                                    connection.setRequestProperty("User-Agent", userAgent); // 设置User-Agent
+                                    connection.setRequestProperty("Content-Type", contentType); // 设置Content-Type
+                                    // 设置其他头信息
+                                    if (otherHeaders != null && !otherHeaders.isEmpty()){
+                                        Map<String, String> otherHeadersMap = parseHttpHeaders(otherHeaders);
+                                        //resultTextArea.appendText("\n### 配置的其它头信息如下：\n");
+                                        for (Map.Entry<String, String> entry : otherHeadersMap.entrySet()) {
+                                            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+                                            connection.setRequestProperty(entry.getKey(), entry.getValue());
+                                            //resultTextArea.appendText( "| " + entry.getKey() + ": " + entry.getValue() + "\n");
                                         }
                                     }
-                                } else if ((expectedStatus == HttpURLConnection.HTTP_INTERNAL_ERROR && responseCode == expectedStatus) || (responseCode == expectedStatus)) { // 并不是所有漏洞利用都是200才成功，所以得以poc中的status为准
-                                        try { // 读取响应内容
+
+                                    connection.setDoOutput(false);
+
+                                    int responseCode = 0;
+                                    try {
+                                        // 获取响应码
+                                        responseCode = connection.getResponseCode();
+                                    } catch (java.net.ConnectException e) {
+                                        Platform.runLater(() -> resultTextArea.appendText("ERR - 网络异常，请检查代理/网站！\n"));
+                                    }
+
+                                    // 增加对404错误的处理
+
+                                    if (responseCode == HttpURLConnection.HTTP_NOT_FOUND && reqCount == reqNum) { // HTTP_NOT_FOUND 对应404状态码
+                                        System.out.println("\n--- 状态码404：" + poc.replace(".json", "") + "!");
+                                    }
+
+                                    if (needDnslog){
+                                        if (checkCeyeApi(subString)){
+                                            if (reqCount == reqNum) {
+                                                System.out.println("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！");
+                                                Platform.runLater(() -> resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n"));
+                                                // 输出请求数据包
+                                                // 拼接请求相关的字符串，构造出请求包内容
+                                                String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
+                                                        + "Host: " + host + "\n"
+                                                        + "User-Agent: " + userAgent + "\n"
+                                                        + "Content-Type: " + contentType + "\n"
+                                                        + otherHeaders + "\n";
+                                                System.out.println("\n【POC/EXP数据包】\n" + reqData);
+                                                Platform.runLater(() -> resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n"));
+                                            }
+                                        } else {
+                                            if (reqCount == reqNum){
+                                                System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
+                                                Platform.runLater(() -> resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n"));
+                                            }
+                                        }
+                                    } else if ((expectedStatus == HttpURLConnection.HTTP_INTERNAL_ERROR && responseCode == expectedStatus) || (responseCode == expectedStatus)) { // 并不是所有漏洞利用都是200才成功，所以得以poc中的status为准
+                                            try { // 读取响应内容
+                                                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                                                String inputLine;
+                                                StringBuilder content = new StringBuilder();
+                                                while ((inputLine = in.readLine()) != null) {
+                                                    content.append(inputLine);
+                                                }
+                                                in.close();
+                                                // 处理响应内容
+                                                String responseBody = content.toString();
+                                                System.out.println("### 响应内容: " + responseBody);
+                                                // 检查响应是否满足条件
+                                                boolean isSuccess = checkHeaders(headerWordsNode, connection.getHeaderFields())
+                                                        && checkBody(bodyWordsNode, responseBody);
+                                                if (isSuccess) {
+                                                    if (reqCount == reqNum) {
+                                                        System.out.println("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！");
+                                                        Platform.runLater(() -> resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n"));
+                                                        // 输出请求数据包
+                                                        // 拼接请求相关的字符串，构造出请求包内容
+                                                        String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
+                                                                + "Host: " + host + "\n"
+                                                                + "User-Agent: " + userAgent + "\n"
+                                                                + "Content-Type: " + contentType + "\n"
+                                                                + otherHeaders + "\n";
+                                                        System.out.println("\n【POC/EXP数据包】\n" + reqData);
+                                                        Platform.runLater(() -> resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n"));
+                                                    }
+                                                } else {
+                                                    if (reqCount == reqNum){
+                                                        System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
+                                                        Platform.runLater(() -> resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n"));
+                                                    }
+                                                }
+
+                                            } catch (IOException e) {
+                                                // 如果getInputStream()抛出异常，尝试通过getErrorStream()获取错误信息
+                                                if (connection.getErrorStream() != null) {
+                                                    BufferedReader errorIn = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+                                                    String errorInputLine;
+                                                    StringBuilder errorContent = new StringBuilder();
+                                                    while ((errorInputLine = errorIn.readLine()) != null) {
+                                                        errorContent.append(errorInputLine);
+                                                    }
+                                                    errorIn.close();
+                                                    String responseBody = errorContent.toString();
+                                                    // 处理错误响应内容，这里可以打印出来或者做其他处理
+                                                    System.out.println("Error Response: " + responseBody);
+                                                    // 检查响应是否满足条件
+                                                    boolean isSuccess = checkHeaders(headerWordsNode, connection.getHeaderFields())
+                                                            && checkBody(bodyWordsNode, responseBody);
+                                                    if (isSuccess) {
+                                                        if (reqCount == reqNum) {
+                                                            System.out.println("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！");
+                                                            Platform.runLater(() -> resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n"));
+                                                            // 输出请求数据包
+                                                            // 拼接请求相关的字符串，构造出请求包内容
+                                                            String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
+                                                                    + "Host: " + host + "\n"
+                                                                    + "User-Agent: " + userAgent + "\n"
+                                                                    + "Content-Type: " + contentType + "\n"
+                                                                    + otherHeaders + "\n";
+                                                            System.out.println("\n【POC/EXP数据包】\n" + reqData);
+                                                            Platform.runLater(() -> resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n"));
+                                                        }
+                                                    } else {
+                                                        if (reqCount == reqNum){
+                                                            System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
+                                                            Platform.runLater(() -> resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n"));
+                                                        }
+                                                    }
+                                                } else {
+                                                    // 没有错误流可读取，直接处理IOException
+                                                    e.printStackTrace();
+                                                }
+                                            }
+
+
+                                        } else {
+                                            if (reqCount == reqNum) {
+                                                System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
+                                                Platform.runLater(() -> resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n"));
+                                            }
+                                        }
+
+
+                                    connection.disconnect(); // 关闭连接
+
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            } else if ("POST".equalsIgnoreCase(method)) {
+                                try {
+                                    // 设置请求方法为POST
+                                    connection.setRequestMethod("POST");
+
+                                    // 设置POST请求相关参数
+                                    connection.setDoOutput(true);
+                                    connection.setRequestProperty("User-Agent", userAgent);
+                                    connection.setRequestProperty("Content-Type", contentType);
+
+                                    // 设置其他头信息
+                                    if (otherHeaders != null && !otherHeaders.isEmpty()){
+                                        Map<String, String> otherHeadersMap = parseHttpHeaders(otherHeaders);
+                                        //resultTextArea.appendText("\n### 配置的其它头信息如下：\n");
+                                        for (Map.Entry<String, String> entry : otherHeadersMap.entrySet()) {
+                                            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+                                            connection.setRequestProperty(entry.getKey(), entry.getValue());
+                                            //resultTextArea.appendText( "| " + entry.getKey() + ": " + entry.getValue() + "\n");
+                                        }
+                                    }
+
+                                    // 写入POST数据
+                                    OutputStream os = connection.getOutputStream();
+                                    os.write(data.getBytes());
+                                    os.flush();
+                                    os.close();
+
+                                    // 获取响应码
+                                    int responseCode = connection.getResponseCode();
+                                    // 增加对404错误的处理
+                                    if (responseCode == HttpURLConnection.HTTP_NOT_FOUND && reqCount==reqNum) { // HTTP_NOT_FOUND 对应404状态码
+                                        System.out.println("\n--- 状态码404：" + poc.replace(".json", "") + "!");
+
+                                    }
+                                    if ((expectedStatus == HttpURLConnection.HTTP_INTERNAL_ERROR && responseCode == expectedStatus) || (responseCode == expectedStatus)) { // 并不是所有漏洞利用都是200才成功，所以得以poc中的status为准
+                                        try {
+                                            // 读取响应内容
                                             BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                                             String inputLine;
                                             StringBuilder content = new StringBuilder();
@@ -777,31 +938,31 @@ public class VulEyeController {
                                             in.close();
                                             // 处理响应内容
                                             String responseBody = content.toString();
-                                            System.out.println("### 响应内容: " + responseBody);
+                                            System.out.println("响应内容: " + responseBody);
                                             // 检查响应是否满足条件
                                             boolean isSuccess = checkHeaders(headerWordsNode, connection.getHeaderFields())
                                                     && checkBody(bodyWordsNode, responseBody);
                                             if (isSuccess) {
                                                 if (reqCount == reqNum) {
                                                     System.out.println("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！");
-                                                    resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
+                                                    Platform.runLater(() -> resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n"));
                                                     // 输出请求数据包
                                                     // 拼接请求相关的字符串，构造出请求包内容
                                                     String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                             + "Host: " + host + "\n"
                                                             + "User-Agent: " + userAgent + "\n"
                                                             + "Content-Type: " + contentType + "\n"
-                                                            + otherHeaders + "\n";
+                                                            + otherHeaders + "\n\n"
+                                                            + data;
                                                     System.out.println("\n【POC/EXP数据包】\n" + reqData);
-                                                    resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
+                                                    Platform.runLater(() -> resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n"));
                                                 }
                                             } else {
-                                                if (reqCount == reqNum){
+                                                if (reqCount == reqNum) {
                                                     System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
-                                                    resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n");
+                                                    Platform.runLater(() -> resultTextArea.appendText("--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n"));
                                                 }
                                             }
-
                                         } catch (IOException e) {
                                             // 如果getInputStream()抛出异常，尝试通过getErrorStream()获取错误信息
                                             if (connection.getErrorStream() != null) {
@@ -821,21 +982,22 @@ public class VulEyeController {
                                                 if (isSuccess) {
                                                     if (reqCount == reqNum) {
                                                         System.out.println("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！");
-                                                        resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
+                                                        Platform.runLater(() -> resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n"));
                                                         // 输出请求数据包
                                                         // 拼接请求相关的字符串，构造出请求包内容
                                                         String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
                                                                 + "Host: " + host + "\n"
                                                                 + "User-Agent: " + userAgent + "\n"
                                                                 + "Content-Type: " + contentType + "\n"
-                                                                + otherHeaders + "\n";
+                                                                + otherHeaders + "\n\n"
+                                                                        + data;
                                                         System.out.println("\n【POC/EXP数据包】\n" + reqData);
-                                                        resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
+                                                        Platform.runLater(() -> resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n"));
                                                     }
                                                 } else {
-                                                    if (reqCount == reqNum){
+                                                    if (reqCount == reqNum) {
                                                         System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
-                                                        resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n");
+                                                        Platform.runLater(() -> resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n"));
                                                     }
                                                 }
                                             } else {
@@ -843,158 +1005,32 @@ public class VulEyeController {
                                                 e.printStackTrace();
                                             }
                                         }
-
-
                                     } else {
                                         if (reqCount == reqNum) {
                                             System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
-                                            resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n");
+                                            Platform.runLater(() -> resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n"));
                                         }
                                     }
+                                    connection.disconnect();
 
-
-                                connection.disconnect(); // 关闭连接
-
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                System.out.println("ERR - 不支持的请求方法: " + method);
                             }
-                        } else if ("POST".equalsIgnoreCase(method)) {
-                            try {
-                                // 设置请求方法为POST
-                                connection.setRequestMethod("POST");
-
-                                // 设置POST请求相关参数
-                                connection.setDoOutput(true);
-                                connection.setRequestProperty("User-Agent", userAgent);
-                                connection.setRequestProperty("Content-Type", contentType);
-
-                                // 设置其他头信息
-                                if (otherHeaders != null && !otherHeaders.isEmpty()){
-                                    Map<String, String> otherHeadersMap = parseHttpHeaders(otherHeaders);
-                                    //resultTextArea.appendText("\n### 配置的其它头信息如下：\n");
-                                    for (Map.Entry<String, String> entry : otherHeadersMap.entrySet()) {
-                                        System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
-                                        connection.setRequestProperty(entry.getKey(), entry.getValue());
-                                        //resultTextArea.appendText( "| " + entry.getKey() + ": " + entry.getValue() + "\n");
-                                    }
-                                }
-
-                                // 写入POST数据
-                                OutputStream os = connection.getOutputStream();
-                                os.write(data.getBytes());
-                                os.flush();
-                                os.close();
-
-                                // 获取响应码
-                                int responseCode = connection.getResponseCode();
-                                // 增加对404错误的处理
-                                if (responseCode == HttpURLConnection.HTTP_NOT_FOUND && reqCount==reqNum) { // HTTP_NOT_FOUND 对应404状态码
-                                    System.out.println("\n--- 状态码404：" + poc.replace(".json", "") + "!");
-
-                                }
-                                if ((expectedStatus == HttpURLConnection.HTTP_INTERNAL_ERROR && responseCode == expectedStatus) || (responseCode == expectedStatus)) { // 并不是所有漏洞利用都是200才成功，所以得以poc中的status为准
-                                    try {
-                                        // 读取响应内容
-                                        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                                        String inputLine;
-                                        StringBuilder content = new StringBuilder();
-                                        while ((inputLine = in.readLine()) != null) {
-                                            content.append(inputLine);
-                                        }
-                                        in.close();
-                                        // 处理响应内容
-                                        String responseBody = content.toString();
-                                        System.out.println("响应内容: " + responseBody);
-                                        // 检查响应是否满足条件
-                                        boolean isSuccess = checkHeaders(headerWordsNode, connection.getHeaderFields())
-                                                && checkBody(bodyWordsNode, responseBody);
-                                        if (isSuccess) {
-                                            if (reqCount == reqNum) {
-                                                System.out.println("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！");
-                                                resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
-                                                // 输出请求数据包
-                                                // 拼接请求相关的字符串，构造出请求包内容
-                                                String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
-                                                        + "Host: " + host + "\n"
-                                                        + "User-Agent: " + userAgent + "\n"
-                                                        + "Content-Type: " + contentType + "\n"
-                                                        + otherHeaders + "\n\n"
-                                                        + data;
-                                                System.out.println("\n【POC/EXP数据包】\n" + reqData);
-                                                resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
-                                            }
-                                        } else {
-                                            if (reqCount == reqNum) {
-                                                System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
-                                                resultTextArea.appendText("--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n");
-                                            }
-                                        }
-                                    } catch (IOException e) {
-                                        // 如果getInputStream()抛出异常，尝试通过getErrorStream()获取错误信息
-                                        if (connection.getErrorStream() != null) {
-                                            BufferedReader errorIn = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-                                            String errorInputLine;
-                                            StringBuilder errorContent = new StringBuilder();
-                                            while ((errorInputLine = errorIn.readLine()) != null) {
-                                                errorContent.append(errorInputLine);
-                                            }
-                                            errorIn.close();
-                                            String responseBody = errorContent.toString();
-                                            // 处理错误响应内容，这里可以打印出来或者做其他处理
-                                            System.out.println("Error Response: " + responseBody);
-                                            // 检查响应是否满足条件
-                                            boolean isSuccess = checkHeaders(headerWordsNode, connection.getHeaderFields())
-                                                    && checkBody(bodyWordsNode, responseBody);
-                                            if (isSuccess) {
-                                                if (reqCount == reqNum) {
-                                                    System.out.println("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！");
-                                                    resultTextArea.appendText("\n+++ 存在漏洞：" + poc.replace(".json", "") + " ！" + "\n");
-                                                    // 输出请求数据包
-                                                    // 拼接请求相关的字符串，构造出请求包内容
-                                                    String reqData = method + " " + uri + " " + "HTTP/1.1" + "\n"
-                                                            + "Host: " + host + "\n"
-                                                            + "User-Agent: " + userAgent + "\n"
-                                                            + "Content-Type: " + contentType + "\n"
-                                                            + otherHeaders + "\n\n"
-                                                                    + data;
-                                                    System.out.println("\n【POC/EXP数据包】\n" + reqData);
-                                                    resultTextArea.appendText("\n【POC/EXP数据包】\n" + "————————————————————————————————————————————————————————\n" + reqData + "\n\n————————————————————————————————————————————————————————" + "\n");
-                                                }
-                                            } else {
-                                                if (reqCount == reqNum) {
-                                                    System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
-                                                    resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n");
-                                                }
-                                            }
-                                        } else {
-                                            // 没有错误流可读取，直接处理IOException
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                } else {
-                                    if (reqCount == reqNum) {
-                                        System.out.println("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!");
-                                        resultTextArea.appendText("\n--- 不存在漏洞：" + poc.replace(".json", "") + "!" + "\n");
-                                    }
-                                }
-                                connection.disconnect();
-
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        } else {
-                            System.out.println("ERR - 不支持的请求方法: " + method);
+                            reqCount = reqCount + 1;
                         }
-                        reqCount = reqCount + 1;
+
                     }
-
+                } else {
+                    System.out.println("ERR - req字段不是一个数组。");
                 }
-            } else {
-                System.out.println("ERR - req字段不是一个数组。");
-            }
 
 
-        }
+            }});
+            taskThread.setDaemon(true); // 设置为守护线程，不影响JVM退出
+            taskThread.start();
 
     }
 
